@@ -15,18 +15,16 @@ use serenity::{
     client::{Context, EventHandler},
     model::{
         gateway::Ready,
-        guild::Role,
         id::GuildId,
         interactions::{
             application_command::{
                 ApplicationCommand, ApplicationCommandInteraction, ApplicationCommandOptionType,
-                ApplicationCommandPermissionType,
             },
             Interaction,
         },
         prelude::{Activity, VoiceState},
     },
-    prelude::{Mentionable, SerenityError},
+    prelude::Mentionable,
 };
 
 pub struct SerenityHandler;
@@ -44,8 +42,7 @@ impl EventHandler for SerenityHandler {
         *SPOTIFY.lock().await = Spotify::auth().await;
 
         // creates the global application commands
-        // and sets them with the correct permissions
-        self.set_commands(&ctx, ready).await;
+        self.create_commands(&ctx).await;
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -84,30 +81,6 @@ impl EventHandler for SerenityHandler {
 }
 
 impl SerenityHandler {
-    async fn apply_role(
-        &self,
-        ctx: &Context,
-        role: Role,
-        guild: GuildId,
-        commands: &[ApplicationCommand],
-    ) {
-        let commands = commands
-            .iter()
-            .filter(|command| !command.default_permission);
-        for command in commands {
-            guild
-                .create_application_command_permission(&ctx.http, command.id, |p| {
-                    p.create_permission(|d| {
-                        d.kind(ApplicationCommandPermissionType::Role)
-                            .id(role.id.0)
-                            .permission(true)
-                    })
-                })
-                .await
-                .expect("failed to create command permission");
-        }
-    }
-
     async fn create_commands(&self, ctx: &Context) -> Vec<ApplicationCommand> {
         ApplicationCommand::set_global_application_commands(&ctx.http, |commands| {
             commands
@@ -315,24 +288,6 @@ impl SerenityHandler {
         .expect("failed to create command")
     }
 
-    async fn ensure_role(
-        &self,
-        ctx: &Context,
-        guild: GuildId,
-        role_name: &str,
-    ) -> Result<Role, SerenityError> {
-        let roles = guild.roles(&ctx.http).await?;
-        let role = roles.iter().find(|(_, role)| role.name == role_name);
-        match role {
-            Some((_, role)) => Ok(role.to_owned()),
-            None => {
-                guild
-                    .create_role(&ctx.http, |r| r.name(role_name).mentionable(true))
-                    .await
-            }
-        }
-    }
-
     async fn run_command(
         &self,
         ctx: &Context,
@@ -425,24 +380,6 @@ impl SerenityHandler {
                     .await
                     .unwrap();
             }
-        }
-    }
-
-    async fn set_commands(&self, ctx: &Context, ready: Ready) {
-        let commands = self.create_commands(ctx).await;
-        let role_name = ready.user.name + "'s DJ";
-        for guild in ready.guilds {
-            let guild_id = guild.id();
-
-            // ensures the role exists, creating it if does not
-            // if it fails to create the role (e.g. no permissions)
-            // it does nothing but output a debug log
-            match self.ensure_role(ctx, guild_id, &role_name).await {
-                Ok(role) => self.apply_role(ctx, role, guild_id, &commands).await,
-                Err(err) => println!(
-                    "Could not create '{role_name}' role for guild {guild_id} because {err:?}"
-                ),
-            };
         }
     }
 
