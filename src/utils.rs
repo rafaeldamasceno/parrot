@@ -107,11 +107,11 @@ pub async fn create_now_playing_embed(track: &TrackHandle) -> CreateEmbed {
     let position = get_human_readable_timestamp(Some(track.get_info().await.unwrap().position));
     let duration = get_human_readable_timestamp(metadata.duration);
 
-    embed.field("Progress", format!(">>> {} / {}", position, duration), true);
+    embed.field("Progress", format!("{} / {}", position, duration), true);
 
     match metadata.channel {
-        Some(channel) => embed.field("Channel", format!(">>> {}", channel), true),
-        None => embed.field("Channel", ">>> N/A", true),
+        Some(channel) => embed.field("Channel", channel, true),
+        None => embed.field("Channel", "N/A", true),
     };
 
     embed.thumbnail(&metadata.thumbnail.unwrap());
