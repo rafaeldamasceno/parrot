@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  parrot:
+    container_name: parrot
+    build: .
+    # image: ghcr.io/aquelemiguel/parrot
+    env_file: .env
+    restart: unless-stopped
