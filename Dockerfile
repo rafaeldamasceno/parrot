@@ -2,8 +2,7 @@
 # Necessary dependencies to build Parrot
 FROM rust:slim-bullseye as build
 
-RUN apt-get update && apt-get install -y \
-    build-essential autoconf automake cmake libtool libssl-dev pkg-config
+RUN apt-get update && apt-get install -y libopus-dev libssl-dev pkg-config
 
 WORKDIR "/parrot"
 
@@ -21,9 +20,11 @@ RUN cargo build --release --locked
 # Necessary dependencies to run Parrot
 FROM debian:bullseye-slim
 
-RUN apt-get update && apt-get install -y python3-pip ffmpeg
-RUN pip install -U yt-dlp
+RUN apt-get update && apt-get install -y ffmpeg python3-pip
+RUN pip install yt-dlp
 
-COPY --from=build /parrot/target/release/parrot .
+WORKDIR "/parrot"
+
+COPY --from=build /parrot/target/release/parrot /parrot
 
 CMD ["./parrot"]
