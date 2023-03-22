@@ -7,3 +7,5 @@ services:
     # image: ghcr.io/aquelemiguel/parrot
     env_file: .env
     restart: unless-stopped
+    volumes:
+      - ./data:/parrot/data
